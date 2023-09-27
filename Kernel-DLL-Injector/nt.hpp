@@ -5,16 +5,18 @@
 
 namespace nt
 {
-	constexpr auto PAGE_SIZE = 0x1000;
-	constexpr auto STATUS_INFO_LENGTH_MISMATCH = 0xC0000004;
+    // Constants
+    constexpr auto PAGE_SIZE = 0x1000;  // Page size (typically 4 KB)
+    constexpr auto STATUS_INFO_LENGTH_MISMATCH = 0xC0000004;  // Status code for buffer length mismatch
 
-	constexpr auto SystemModuleInformation = 11;
-	constexpr auto SystemHandleInformation = 16;
-	constexpr auto SystemExtendedHandleInformation = 64;
-	
-	typedef NTSTATUS(*NtLoadDriver)(PUNICODE_STRING DriverServiceName);
-	typedef NTSTATUS(*NtUnloadDriver)(PUNICODE_STRING DriverServiceName);
-	typedef NTSTATUS(*RtlAdjustPrivilege)(_In_ ULONG Privilege, _In_ BOOLEAN Enable, _In_ BOOLEAN Client, _Out_ PBOOLEAN WasEnabled);
+    constexpr auto SystemModuleInformation = 11;  // Request system module information
+    constexpr auto SystemHandleInformation = 16;  // Request system handle information
+    constexpr auto SystemExtendedHandleInformation = 64;  // Request extended system handle information
+
+    // Function Pointer Types
+    typedef NTSTATUS (*NtLoadDriver)(PUNICODE_STRING DriverServiceName);
+    typedef NTSTATUS (*NtUnloadDriver)(PUNICODE_STRING DriverServiceName);
+    typedef NTSTATUS (*RtlAdjustPrivilege)(_In_ ULONG Privilege, _In_ BOOLEAN Enable, _In_ BOOLEAN Client, _Out_ PBOOLEAN WasEnabled);
 
 	typedef struct _SYSTEM_HANDLE
 	{
