@@ -1,15 +1,18 @@
 #include "kdmapper.hpp"
 #include "driver.hpp"
 
+# Function to map a driver into kernel memory
 uint64_t kdmapper::MapDriver(HANDLE iqvw64e_device_handle)
 {
+	# Copy the driver image into a vector
 	std::vector<uint8_t> raw_image(sizeof(driver_byted));
 	memcpy(raw_image.data(), driver_byted, sizeof(driver_byted));
 
+	  // Get the NT headers of the PE image
 	const PIMAGE_NT_HEADERS64 nt_headers = portable_executable::GetNtHeaders(raw_image.data());
-
 	if (!nt_headers)
 	{
+		# If this fails then print and error message and exit
 		std::cout << xor ("[-] Invalid format of PE image") << std::endl;
 		return 0;
 	}
@@ -21,13 +24,16 @@ uint64_t kdmapper::MapDriver(HANDLE iqvw64e_device_handle)
 	}
 
 	const uint32_t image_size = nt_headers->OptionalHeader.SizeOfImage;
-	
+
+	// Allocate local memory for the driver image
 	void* local_image_base = VirtualAlloc(nullptr, image_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 	if (!local_image_base)
 		return 0;
 
+	// Calculate the total virtual header size
 	DWORD TotalVirtualHeaderSize = (IMAGE_FIRST_SECTION(nt_headers))->VirtualAddress;
 
+	// Allocate memory for the driver image in kernel space
 	uint64_t kernel_image_base = intel_driver::AllocatePool(iqvw64e_device_handle, nt::POOL_TYPE::NonPagedPool, image_size - TotalVirtualHeaderSize);
 
 	do
@@ -41,11 +47,9 @@ uint64_t kdmapper::MapDriver(HANDLE iqvw64e_device_handle)
 		//std::cout << xor ("[+] Image base has been allocated at 0x") << reinterpret_cast<void*>(kernel_image_base) << std::endl;
 
 		// Copy image headers
-
 		memcpy(local_image_base, raw_image.data(), nt_headers->OptionalHeader.SizeOfHeaders);
 
 		// Copy image sections
-
 		const PIMAGE_SECTION_HEADER current_image_section = IMAGE_FIRST_SECTION(nt_headers);
 		
 		for (auto i = 0; i < nt_headers->FileHeader.NumberOfSections; ++i)
@@ -71,7 +75,6 @@ uint64_t kdmapper::MapDriver(HANDLE iqvw64e_device_handle)
 		}
 
 		// Write fixed image to kernel
-
 		if (!intel_driver::WriteMemory(iqvw64e_device_handle, realBase, (PVOID)((uintptr_t)local_image_base + TotalVirtualHeaderSize), image_size - TotalVirtualHeaderSize))
 		{
 			std::cout << xor ("[-] Failed to write local image to remote image") << std::endl;
@@ -80,7 +83,6 @@ uint64_t kdmapper::MapDriver(HANDLE iqvw64e_device_handle)
 		}
 
 		// Call driver entry point
-
 		const uint64_t address_of_entry_point = kernel_image_base + nt_headers->OptionalHeader.AddressOfEntryPoint;
 
 		std::cout << xor ("[<] Calling entry point...") << std::endl;
@@ -117,6 +119,7 @@ uint64_t kdmapper::MapDriver(HANDLE iqvw64e_device_handle)
 	return 0;
 }
 
+// Function to relocate image sections by a delta
 void kdmapper::RelocateImageByDelta(portable_executable::vec_relocs relocs, const uint64_t delta)
 {
 	for (const auto& current_reloc : relocs)
@@ -132,6 +135,7 @@ void kdmapper::RelocateImageByDelta(portable_executable::vec_relocs relocs, cons
 	}
 }
 
+// Function to resolve imports
 bool kdmapper::ResolveImports(HANDLE iqvw64e_device_handle, portable_executable::vec_imports imports)
 {
 	for (const auto& current_import : imports)
@@ -151,7 +155,7 @@ bool kdmapper::ResolveImports(HANDLE iqvw64e_device_handle, portable_executable:
 				std::cout << xor ("[-] Failed to resolve import ") << current_function_data.name << " (" << current_import.module_name << ")" << std::endl;
 				return false;
 			}
-
+			// Store the resolved function address
 			*current_function_data.address = function_address;
 		}
 	}
